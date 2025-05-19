@@ -150,16 +150,11 @@
         text-shadow: 0 1px 3px #00000015;
       }
       #liveDataBox span {
-        background: #a3c293aa;
-        border-radius: 50%;
         width: 68px;
         height: 68px;
-        line-height: 68px;
         text-align: center;
         color: #3a5a40cc;
         font-weight: 900;
-        font-size: 1.8rem;
-        box-shadow: 0 0 18px #a3c293aa, inset 0 0 10px #a3c293cc;
         transition: box-shadow 0.3s ease;
       }
       #liveDataBox span:hover {
@@ -434,7 +429,10 @@
 
       function showLiveAdvice(hr, hrv, baseline) {
         const adviceBox = document.getElementById("liveAdvice");
-        if (!baseline) { adviceBox.style.display = "none"; return; }
+        if (!baseline || valueCount < 5) { 
+          adviceBox.style.display = "none"; 
+          return; 
+        }
         let msg = "";
         const hrDev = Math.abs(hr - baseline.hr);
         const hrvDev = Math.abs(hrv - baseline.hrv);
@@ -566,6 +564,27 @@
         }
       }
 
+      let latest = { hr: null, hrv: null };
+      let valueCount = 0;
+
+      function handleNewMeasurement(type, value) {
+        latest[type] = value;
+        if (latest.hr !== null && latest.hrv !== null) {
+          valueCount++;
+          if (valueCount === 5) {
+            alertBox.style.display = "block";
+            alertBox.textContent = "Great! We've received 5 stable measurements. Your data is now being tracked.";
+            setTimeout(() => {
+              alertBox.style.display = "none";
+            }, 5000);
+          }
+          if (shouldPushToFirebase(latest.hr, latest.hrv)) {
+            saveMeasurement(latest.hr, latest.hrv);
+          }
+          latest = { hr: null, hrv: null };
+        }
+      }
+
       connectBtn.onclick = async () => {
         try {
           const device = await navigator.bluetooth.requestDevice({
@@ -602,22 +621,16 @@
           await hrChar.startNotifications();
           await hrvChar.startNotifications();
           statusMsg.textContent = "Connected!";
+          alertBox.style.display = "block";
+          alertBox.textContent = "Device connected! Waiting for stable measurements...";
+          setTimeout(() => {
+            alertBox.style.display = "none";
+          }, 5000);
+          valueCount = 0;
         } catch (e) {
           statusMsg.textContent = "Error: " + e;
         }
       };
-
-      let latest = { hr: null, hrv: null };
-
-      function handleNewMeasurement(type, value) {
-        latest[type] = value;
-        if (latest.hr !== null && latest.hrv !== null) {
-          if (shouldPushToFirebase(latest.hr, latest.hrv)) {
-            saveMeasurement(latest.hr, latest.hrv);
-          }
-          latest = { hr: null, hrv: null };
-        }
-      }
 
       loadInitialData();
     });
