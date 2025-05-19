@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Greta Grip</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #d6ecd2 0%, #a3c293 100%);
+        margin: 0;
+        padding: 40px 30px;
+        color: #3a5a40dd;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        overflow-x: hidden;
+        animation: fadeInBody 1s ease forwards;
+        gap: 25px;
+      }
+      @keyframes fadeInBody {
+        0% {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      h1 {
+        color: #3a5a40ee;
+        font-weight: 700;
+        margin-bottom: 15px;
+        text-align: center;
+        text-shadow: 0 2px 6px #3a5a4033;
+        letter-spacing: 1.3px;
+      }
+
+      button {
+        background: linear-gradient(145deg, #6aa96fdd, #3a5a40cc);
+        color: #d6ecd2ee;
+        border: none;
+        border-radius: 30px;
+        padding: 16px 32px;
+        font-weight: 700;
+        font-size: 1.1rem;
+        cursor: pointer;
+        box-shadow: 0 6px 12px rgba(58, 90, 64, 0.3),
+          inset 0 -3px 8px rgba(214, 236, 210, 0.2);
+        transition: background 0.3s ease, transform 0.2s ease,
+          box-shadow 0.3s ease;
+        width: 100%;
+        max-width: 340px;
+        user-select: none;
+        backdrop-filter: blur(6px);
+        margin: 10px 0;
+      }
+      button:hover {
+        background: linear-gradient(145deg, #81b47cee, #2f4c36cc);
+        box-shadow: 0 8px 16px rgba(58, 90, 64, 0.6),
+          inset 0 -4px 12px rgba(214, 236, 210, 0.3);
+        transform: scale(1.05);
+      }
+      button:active {
+        transform: scale(0.97);
+      }
+
+      input {
+        width: 80px;
+        padding: 14px 20px;
+        border-radius: 30px;
+        border: 2px solid transparent;
+        background: rgba(214, 236, 210, 0.7);
+        font-size: 1.1rem;
+        font-weight: 700;
+        text-align: center;
+        color: #3a5a40ee;
+        box-shadow: 0 4px 10px rgba(58, 90, 64, 0.1);
+        transition: border-color 0.4s ease, background 0.4s ease;
+        user-select: text;
+        backdrop-filter: blur(5px);
+      }
+      input:focus {
+        border-color: #6aa96fcc;
+        background: rgba(214, 236, 210, 0.95);
+        outline: none;
+      }
+
+      #statusMsg {
+        font-weight: 600;
+        color: #6aa96fcc;
+        margin-top: 10px;
+        min-height: 22px;
+        text-align: center;
+        text-shadow: 0 1px 2px #6aa96c40;
+      }
+
+      #alertBox {
+        background: rgba(163, 194, 147, 0.6);
+        color: #3a5a40dd;
+        padding: 18px 24px;
+        border-radius: 35px;
+        font-weight: 800;
+        font-size: 1.2rem;
+        margin: 22px 0;
+        text-align: center;
+        box-shadow: 0 0 20px #a3c293aa, inset 0 0 12px #a3c293cc;
+        backdrop-filter: saturate(180%) blur(15px);
+        user-select: none;
+        animation: fadeInAlert 0.8s ease forwards;
+      }
+
+      #liveDataBox {
+        background: rgba(214, 236, 210, 0.55);
+        width: 100%;
+        max-width: 340px;
+        border-radius: 25px;
+        padding: 30px 35px;
+        box-shadow: 0 14px 30px rgba(58, 90, 64, 0.12);
+        margin: 15px 0;
+        backdrop-filter: saturate(180%) blur(14px);
+        user-select: none;
+        animation: fadeInCard 1.2s ease forwards;
+      }
+
+      #liveDataBox h3 {
+        color: #3a5a40dd;
+        margin-bottom: 16px;
+        font-weight: 800;
+        font-size: 1.4rem;
+        text-align: center;
+        letter-spacing: 0.9px;
+        text-shadow: 0 1px 2px #3a5a4040;
+      }
+
+      #liveDataBox p {
+        font-size: 1.5rem;
+        margin: 12px 0;
+        font-weight: 800;
+        color: #3a5a40cc;
+        display: flex;
+        justify-content: center;
+        gap: 18px;
+        text-shadow: 0 1px 3px #00000015;
+      }
+      #liveDataBox span {
+        background: #a3c293aa;
+        border-radius: 50%;
+        width: 68px;
+        height: 68px;
+        line-height: 68px;
+        text-align: center;
+        color: #3a5a40cc;
+        font-weight: 900;
+        font-size: 1.8rem;
+        box-shadow: 0 0 18px #a3c293aa, inset 0 0 10px #a3c293cc;
+        transition: box-shadow 0.3s ease;
+      }
+      #liveDataBox span:hover {
+        box-shadow: 0 0 30px #8db066ee, inset 0 0 20px #a9d484ee;
+      }
+
+      #baselineToggleBtn {
+        margin: 30px 0 10px 0;
+        max-width: 180px;
+        background: linear-gradient(145deg, #6aa96fcc, #3a5a4099);
+        color: #d6ecd2ff;
+        box-shadow: 0 6px 12px rgba(106, 169, 111, 0.3),
+          inset 0 -3px 8px rgba(214, 236, 210, 0.15);
+      }
+
+      #baselineDropdown {
+        width: 100%;
+        max-width: 340px;
+        background: rgba(214, 236, 210, 0.5);
+        border-radius: 25px;
+        padding: 30px 35px;
+        box-shadow: 0 10px 25px rgba(106, 169, 111, 0.18);
+        backdrop-filter: saturate(180%) blur(14px);
+        margin: 15px 0;
+        display: none;
+        user-select: none;
+        animation: fadeInCard 0.5s ease forwards;
+      }
+      #baselineDropdown label {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #3a5a40dd;
+        margin-right: 12px;
+      }
+      #baselineDropdown input {
+        width: 85px;
+        margin-right: 20px;
+      }
+      #saveBaselineBtn {
+        width: auto;
+        padding: 12px 28px;
+        background: linear-gradient(145deg, #6aa96fee, #3a5a40cc);
+        color: #d6ecd2ee;
+        box-shadow: 0 6px 12px rgba(106, 169, 111, 0.5),
+          inset 0 -3px 8px rgba(214, 236, 210, 0.3);
+      }
+      #saveBaselineBtn:hover {
+        background: linear-gradient(145deg, #81b47cee, #2f4c36cc);
+        box-shadow: 0 8px 16px rgba(58, 90, 64, 0.6),
+          inset 0 -4px 12px rgba(214, 236, 210, 0.3);
+      }
+      #saveBaselineBtn:active {
+        transform: scale(0.97);
+      }
+
+      #historyList {
+        width: 100%;
+        max-width: 340px;
+        margin: 15px 0;
+        background: rgba(255 255 255 / 0.6);
+        border-radius: 25px;
+        padding: 30px 35px;
+        box-shadow: 0 14px 30px rgba(43, 65, 65, 0.12);
+        backdrop-filter: saturate(180%) blur(12px);
+        animation: fadeInCard 1.4s ease forwards;
+      }
+      #historyList h3 {
+        color: #3a5a40;
+        margin-bottom: 12px;
+        font-weight: 700;
+        font-size: 1.3rem;
+        text-align: center;
+        letter-spacing: 0.8px;
+        text-shadow: 0 1px 2px #6d72c340;
+      }
+      #historyList ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        max-height: 220px;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: #245a00aa rgba(255, 214, 200, 0.5);
+        border-radius: 18px;
+        padding: 10px 0 10px 0;
+      }
+      #historyList ul::-webkit-scrollbar {
+        width: 8px;
+      }
+      #historyList ul::-webkit-scrollbar-track {
+        background: rgba(255, 214, 200, 0.3);
+        border-radius: 12px;
+      }
+      #historyList ul::-webkit-scrollbar-thumb {
+        background-color: #21a700cc;
+        border-radius: 12px;
+      }
+      #historyList li {
+        margin: 10px 8px;
+        padding: 8px 4px 10px 4px;
+        border-radius: 8px;
+        font-size: 1.08rem;
+        color: #234;
+        font-weight: 500;
+        letter-spacing: 0.2px;
+        display: block;
+        border: none;
+      }
+      #historyList li span {
+        font-weight: 700;
+        color: black;
+      }
+
+      @media (max-width: 400px) {
+        button,
+        #historyList,
+        #liveDataBox,
+        #baselineDropdown {
+          max-width: 100%;
+          padding: 20px;
+        }
+        input {
+          width: 65px;
+          margin-right: 10px;
+          font-size: 1.2rem;
+          padding: 12px 15px;
+        }
+        #liveDataBox span {
+          width: 58px;
+          height: 58px;
+          line-height: 58px;
+          font-size: 1.4rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <img src="afry.png" alt="AFRY Logo" style="display:block;margin:0 auto 2px auto;max-width:120px;width:100%;height:auto;" />
+    <h1>Greta Grip</h1>
+
+    <button id="connectBtn">Find Device</button>
+    <p id="statusMsg"></p>
+
+    <div id="liveDataBox" style="display: none">
+      <h3>Live Measurement</h3>
+      <p>HR: <span id="liveHR">--</span></p>
+      <p>HRV: <span id="liveHRV">--</span></p>
+    </div>
+    <div id="liveAdvice" style="display:none;margin-top:8px;font-size:1.04rem;color:#2b4141;background:#f8fafb;border-radius:10px;padding:10px 18px;max-width:340px;"></div>
+
+    <div id="baselineSection"></div>
+
+    <div id="alertBox" style="display: none"></div>
+
+    <div id="historyList">
+      <h3>History</h3>
+      <ul></ul>
+    </div>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const firebaseConfig = {
+        apiKey: "AIzaSyAAWcC9H9Nb0XN8CgxLvSlA-fbWmNy32G0",
+        authDomain: "lia24-ee1fd.firebaseapp.com",
+        projectId: "lia24-ee1fd",
+        storageBucket: "lia24-ee1fd.appspot.com",
+        messagingSenderId: "144194497520",
+        appId: "1:144194497520:web:0e0c19e4b7336507ab4b35",
+        databaseURL:
+          "https://lia24-ee1fd-default-rtdb.europe-west1.firebasedatabase.app/",
+      };
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.database();
+
+      const connectBtn = document.getElementById("connectBtn");
+      const statusMsg = document.getElementById("statusMsg");
+      const liveHR = document.getElementById("liveHR");
+      const liveHRV = document.getElementById("liveHRV");
+      const alertBox = document.getElementById("alertBox");
+      const baselineSection = document.getElementById("baselineSection");
+      const liveDataBox = document.getElementById("liveDataBox");
+      const historyListUl = document.querySelector("#historyList ul");
+
+      let lastFive = [];
+      let lastHR = null,
+        lastHRV = null;
+      let sameCount = 0;
+      let pushedLast = false;
+      const SAME_THRESHOLD = 4;
+      const MAX_HR_JUMP = 30;
+      const MAX_HRV_JUMP = 50;
+
+      async function renderBaselineUI() {
+        console.log("renderBaselineUI called");
+        const baselineSnap = await db.ref("baseline").get();
+        console.log("Firebase baselineSnap.exists():", baselineSnap.exists());
+        console.log("Firebase baselineSnap.val():", baselineSnap.val());
+        baselineSection.innerHTML = "";
+        if (!baselineSnap.exists()) {
+          baselineSection.innerHTML = `
+            <div id="baselineInputBox">
+              <h3>Set Your Baseline</h3>
+              <label>HR: <input type="number" id="hrBaselineInput" placeholder="HR" /></label><br><br>
+              <label>HRV: <input type="number" id="hrvBaselineInput" placeholder="HRV" /></label><br><br>
+              <button id="saveBaselineBtn">Save Baseline</button>
+            </div>
+          `;
+          const saveBtn = document.getElementById("saveBaselineBtn");
+          if (saveBtn) saveBtn.onclick = async () => {
+            const hr = parseInt(document.getElementById("hrBaselineInput").value);
+            const hrv = parseInt(document.getElementById("hrvBaselineInput").value);
+            if (isNaN(hr) || isNaN(hrv)) {
+              alert("Invalid values!");
+              return;
+            }
+            await db.ref("baseline").set({ hr, hrv });
+            alert("Baseline saved!");
+            renderBaselineUI();
+          };
+        } else {
+          const baseline = baselineSnap.val();
+          baselineSection.innerHTML = `
+            <div id="baselineDisplayBox">
+              <button id="showBaselineBtn">Show Baseline</button>
+              <div id="baselineDisplay" style="display:none;margin:15px 0;"></div>
+              <button id="editBaselineBtn">Edit Baseline</button>
+              <div id="editBaselineBox" style="display:none;margin-top:15px;">
+                <label>HR: <input type="number" id="editHrBaselineInput" value="${baseline.hr}" /></label><br><br>
+                <label>HRV: <input type="number" id="editHrvBaselineInput" value="${baseline.hrv}" /></label><br><br>
+                <button id="saveEditBaselineBtn">Save Baseline</button>
+                <button id="cancelEditBaselineBtn">Cancel</button>
+              </div>
+            </div>
+          `;
+          const showBtn = document.getElementById("showBaselineBtn");
+          if (showBtn) showBtn.onclick = () => {
+            const display = document.getElementById("baselineDisplay");
+            display.innerHTML = `<b>Current Baseline:</b><br>HR: ${baseline.hr}<br>HRV: ${baseline.hrv}`;
+            display.style.display = "block";
+          };
+          const editBtn = document.getElementById("editBaselineBtn");
+          if (editBtn) editBtn.onclick = () => {
+            document.getElementById("editBaselineBox").style.display = "block";
+          };
+          const saveEditBtn = document.getElementById("saveEditBaselineBtn");
+          if (saveEditBtn) saveEditBtn.onclick = async () => {
+            const hr = parseInt(document.getElementById("editHrBaselineInput").value);
+            const hrv = parseInt(document.getElementById("editHrvBaselineInput").value);
+            if (isNaN(hr) || isNaN(hrv)) {
+              alert("Invalid values!");
+              return;
+            }
+            await db.ref("baseline").set({ hr, hrv });
+            alert("Baseline updated!");
+            renderBaselineUI();
+          };
+          const cancelEditBtn = document.getElementById("cancelEditBaselineBtn");
+          if (cancelEditBtn) cancelEditBtn.onclick = () => {
+            document.getElementById("editBaselineBox").style.display = "none";
+          };
+        }
+      }
+      renderBaselineUI();
+      let lastBaseline = null;
+      async function getBaseline() {
+        const snap = await db.ref("baseline").get();
+        if (snap.exists()) return snap.val();
+        return null;
+      }
+
+      function showLiveAdvice(hr, hrv, baseline) {
+        const adviceBox = document.getElementById("liveAdvice");
+        if (!baseline) { adviceBox.style.display = "none"; return; }
+        let msg = "";
+        const hrDev = Math.abs(hr - baseline.hr);
+        const hrvDev = Math.abs(hrv - baseline.hrv);
+        if (hrDev > 10 && hr > baseline.hr) {
+          msg += `Your heart rate is a bit higher than usual. This might be due to things like less sleep, recent caffeine, alcohol, or nicotine, or even some physical activity. Nothing to worry about, just something to keep in mind!`;
+        } else if (hrDev > 10 && hr < baseline.hr) {
+          msg += `Your heart rate is a little lower than usual. This could be a sign of deep rest, relaxation, or recovery after some physical activity. Great job taking care of yourself!`;
+        }
+        if (hrvDev > 10 && hrv < baseline.hrv) {
+          if (msg) msg += '<br><br>';
+          msg += `Your HRV is a bit lower than usual. This can happen due to things like stress, less sleep, stimulants, or even feeling under the weather. It might be a good time to take it easy and prioritize rest.`;
+        } else if (hrvDev > 10 && hrv > baseline.hrv) {
+          if (msg) msg += '<br><br>';
+          msg += `Your HRV is higher than usual, nice! This could be a sign of good recovery, relaxation, or your body adapting well. Keep it up!"`;
+        }
+        if (msg) {
+          adviceBox.innerHTML = msg;
+          adviceBox.style.display = "block";
+        } else {
+          adviceBox.style.display = "none";
+        }
+      }
+      async function loadInitialData() {
+        const lastSnap = await db.ref("measurements").limitToLast(1).get();
+        if (lastSnap.exists()) {
+          lastSnap.forEach((child) => {
+            liveHR.textContent = child.val().hr;
+            liveHRV.textContent = child.val().hrv;
+            liveDataBox.style.display = "block";
+            getBaseline().then(baseline => {
+              lastBaseline = baseline;
+              showLiveAdvice(child.val().hr, child.val().hrv, baseline);
+            });
+          });
+        }
+
+        const historySnap = await db.ref("measurements").limitToLast(5).get();
+        historyListUl.innerHTML = "";
+        if (historySnap.exists()) {
+          const items = [];
+          historySnap.forEach((child) => {
+            items.push(child.val());
+          });
+          items.sort((a, b) => b.timestamp - a.timestamp);
+          for (const item of items) {
+            const date = new Date(item.timestamp);
+            const li = document.createElement("li");
+            li.innerHTML = `
+              <div style="font-weight:700;font-size:1.05rem;color:#3a5a40;margin-bottom:2px;">
+                ${date.toLocaleDateString()}<br><span style='font-weight:500;font-size:0.98rem;'>${date.toLocaleTimeString()}</span>
+              </div>
+              <div style="margin-top:4px;font-size:1.08rem;">
+                <span style="color:#2b4141;font-weight:600;">HR:</span> <span style="color:#4a7c59;font-weight:700;">${item.hr}</span>
+                <span style="margin-left:18px;color:#2b4141;font-weight:600;">HRV:</span> <span style="color:#4a7c59;font-weight:700;">${item.hrv}</span>
+              </div>
+            `;
+            historyListUl.appendChild(li);
+          }
+        }
+      }
+
+      function shouldPushToFirebase(currentHR, currentHRV) {
+        if (lastHR !== null && lastHRV !== null) {
+          const hrJump = Math.abs(currentHR - lastHR);
+          const hrvJump = Math.abs(currentHRV - lastHRV);
+          if (hrJump > MAX_HR_JUMP || hrvJump > MAX_HRV_JUMP) {
+            console.warn("Skipping noisy data", currentHR, currentHRV);
+            sameCount = 0;
+            pushedLast = false;
+            lastHR = currentHR;
+            lastHRV = currentHRV;
+            return false;
+          }
+
+          if (currentHR === lastHR && currentHRV === lastHRV) {
+            sameCount++;
+          } else {
+            sameCount = 0;
+            pushedLast = false;
+          }
+
+          if (sameCount >= SAME_THRESHOLD && !pushedLast) {
+            pushedLast = true;
+            return true;
+          }
+        }
+
+        lastHR = currentHR;
+        lastHRV = currentHRV;
+        return false;
+      }
+
+      async function saveMeasurement(hr, hrv) {
+        const newEntry = { hr, hrv, timestamp: Date.now() };
+        lastFive.push(newEntry);
+        if (lastFive.length > 5) lastFive.shift();
+
+        const last = lastFive.length > 1 ? lastFive[lastFive.length - 2] : null;
+
+        const isDuplicate = lastFive.every((v) => v.hr === hr && v.hrv === hrv);
+        const isDrastic = last && Math.abs(hr - last.hr) > 20;
+
+        if (!isDuplicate || isDrastic) {
+          await db.ref("measurements").push(newEntry);
+          console.log("Saved to DB:", newEntry);
+          updateHistoryList(newEntry);
+        }
+      }
+
+      function updateHistoryList(newEntry) {
+        lastFive.push(newEntry);
+        if (lastFive.length > 5) lastFive.shift();
+
+        historyListUl.innerHTML = "";
+        const sorted = [...lastFive].sort((a, b) => b.timestamp - a.timestamp);
+        for (const item of sorted) {
+          const date = new Date(item.timestamp);
+          const li = document.createElement("li");
+          li.innerHTML = `
+            <div style="font-weight:700;font-size:1.05rem;color:#3a5a40;margin-bottom:2px;">
+              ${date.toLocaleDateString()}<br><span style='font-weight:500;font-size:0.98rem;'>${date.toLocaleTimeString()}</span>
+            </div>
+            <div style="margin-top:4px;font-size:1.08rem;">
+              <span style="color:#2b4141;font-weight:600;">HR:</span> <span style="color:#4a7c59;font-weight:700;">${item.hr}</span>
+              <span style="margin-left:18px;color:#2b4141;font-weight:600;">HRV:</span> <span style="color:#4a7c59;font-weight:700;">${item.hrv}</span>
+            </div>
+          `;
+          historyListUl.appendChild(li);
+        }
+      }
+
+      connectBtn.onclick = async () => {
+        try {
+          const device = await navigator.bluetooth.requestDevice({
+            acceptAllDevices: true,
+            optionalServices: ["0000fe40-cc7a-482a-984a-7f2ed5b3e58f"],
+          });
+          const server = await device.gatt.connect();
+          const service = await server.getPrimaryService(
+            "0000fe40-cc7a-482a-984a-7f2ed5b3e58f"
+          );
+
+          const hrChar = await service.getCharacteristic(
+            "0000fe41-8e22-4541-9d4c-21edae82ed19"
+          );
+          const hrvChar = await service.getCharacteristic(
+            "0000fe42-8e22-4541-9d4c-21edae82ed19"
+          );
+
+          hrChar.addEventListener("characteristicvaluechanged", (e) => {
+            const hr = e.target.value.getUint16(0, true) / 100;
+            liveHR.textContent = hr;
+            liveDataBox.style.display = "block";
+            if (lastBaseline) showLiveAdvice(hr, lastBaseline.hrv, lastBaseline);
+            handleNewMeasurement("hr", hr);
+          });
+
+          hrvChar.addEventListener("characteristicvaluechanged", (e) => {
+            const hrv = e.target.value.getUint16(0, true) / 100;
+            liveHRV.textContent = hrv;
+            if (lastBaseline) showLiveAdvice(lastBaseline.hr, hrv, lastBaseline);
+            handleNewMeasurement("hrv", hrv);
+          });
+
+          await hrChar.startNotifications();
+          await hrvChar.startNotifications();
+          statusMsg.textContent = "Connected!";
+        } catch (e) {
+          statusMsg.textContent = "Error: " + e;
+        }
+      };
+
+      let latest = { hr: null, hrv: null };
+
+      function handleNewMeasurement(type, value) {
+        latest[type] = value;
+        if (latest.hr !== null && latest.hrv !== null) {
+          if (shouldPushToFirebase(latest.hr, latest.hrv)) {
+            saveMeasurement(latest.hr, latest.hrv);
+          }
+          latest = { hr: null, hrv: null };
+        }
+      }
+
+      loadInitialData();
+    });
+    </script>
+  </body>
+</html>
