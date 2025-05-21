@@ -298,8 +298,8 @@
     <button id="connectBtn">Find Device</button>
     <p id="statusMsg"></p>
 
-    <div id="liveDataBox" style="display: none">
-      <h3>Live Measurement</h3>
+    <div id="liveDataBox" style="display:none">
+      <h3 id="lastTitle">Live Measurement</h3>
       <p>HR: <span id="liveHR">--</span></p>
       <p>HRV: <span id="liveHRV">--</span></p>
     </div>
@@ -333,6 +333,7 @@
 
       const connectBtn = document.getElementById("connectBtn");
       const statusMsg = document.getElementById("statusMsg");
+      const lastTitel = document.getElementById("lastTitle");
       const liveHR = document.getElementById("liveHR");
       const liveHRV = document.getElementById("liveHRV");
       const alertBox = document.getElementById("alertBox");
@@ -459,6 +460,7 @@
         const lastSnap = await db.ref("measurements").limitToLast(1).get();
         if (lastSnap.exists()) {
           lastSnap.forEach((child) => {
+            lastTitel.textContent = "Latest Measurement"
             liveHR.textContent = child.val().hr;
             liveHRV.textContent = child.val().hrv;
             liveDataBox.style.display = "block";
@@ -622,7 +624,9 @@
           await hrvChar.startNotifications();
           statusMsg.textContent = "Connected!";
           alertBox.style.display = "block";
+          lastTitel.textContent = "Live data:"
           alertBox.textContent = "Device connected! Waiting for stable measurements...";
+          
           setTimeout(() => {
             alertBox.style.display = "none";
           }, 5000);
