@@ -294,28 +294,28 @@
   <body>
     <img src="afry.png" alt="AFRY Logo" style="display:block;margin:0 auto 2px auto;max-width:120px;width:100%;height:auto;" />
     <h1>Greta Grip</h1>
-
+  
     <button id="connectBtn">Find Device</button>
     <p id="statusMsg"></p>
-
+  
     <div id="liveDataBox" style="display: none">
-      <h3>Live Measurement</h3>
+      <h3 id="liveDataHeading">Latest Measurement</h3>
       <p>HR: <span id="liveHR">--</span></p>
       <p>HRV: <span id="liveHRV">--</span></p>
     </div>
     <div id="liveAdvice" style="display:none;margin-top:8px;font-size:1.04rem;color:#2b4141;background:#f8fafb;border-radius:10px;padding:10px 18px;max-width:340px;"></div>
-
+  
     <div id="baselineSection"></div>
-
+  
     <div id="alertBox" style="display: none"></div>
-
+  
     <div id="historyList">
       <h3>History</h3>
       <ul></ul>
     </div>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
+  
     <script>
     document.addEventListener('DOMContentLoaded', function() {
       const firebaseConfig = {
@@ -330,7 +330,7 @@
       };
       firebase.initializeApp(firebaseConfig);
       const db = firebase.database();
-
+      let adviceShown = false;
       const connectBtn = document.getElementById("connectBtn");
       const statusMsg = document.getElementById("statusMsg");
       const liveHR = document.getElementById("liveHR");
@@ -339,7 +339,7 @@
       const baselineSection = document.getElementById("baselineSection");
       const liveDataBox = document.getElementById("liveDataBox");
       const historyListUl = document.querySelector("#historyList ul");
-
+  
       let lastFive = [];
       let lastHR = null,
         lastHRV = null;
@@ -347,13 +347,11 @@
       let pushedLast = false;
       const SAME_THRESHOLD = 4;
       const MAX_HR_JUMP = 30;
-      const MAX_HRV_JUMP = 50;
-
+      const MAX_HRV_JUMP = 100;
+  
       async function renderBaselineUI() {
         console.log("renderBaselineUI called");
         const baselineSnap = await db.ref("baseline").get();
-        console.log("Firebase baselineSnap.exists():", baselineSnap.exists());
-        console.log("Firebase baselineSnap.val():", baselineSnap.val());
         baselineSection.innerHTML = "";
         if (!baselineSnap.exists()) {
           baselineSection.innerHTML = `
@@ -426,7 +424,7 @@
         if (snap.exists()) return snap.val();
         return null;
       }
-
+  
       function showLiveAdvice(hr, hrv, baseline) {
         const adviceBox = document.getElementById("liveAdvice");
         if (!baseline || valueCount < 5) { 
@@ -446,7 +444,7 @@
           msg += `Your HRV is a bit lower than usual. This can happen due to things like stress, less sleep, stimulants, or even feeling under the weather. It might be a good time to take it easy and prioritize rest.`;
         } else if (hrvDev > 10 && hrv > baseline.hrv) {
           if (msg) msg += '<br><br>';
-          msg += `Your HRV is higher than usual, nice! This could be a sign of good recovery, relaxation, or your body adapting well. Keep it up!"`;
+          msg += `Your HRV is higher than usual, nice! This could be a sign of good recovery, relaxation, or your body adapting well. Keep it up!`;
         }
         if (msg) {
           adviceBox.innerHTML = msg;
@@ -462,13 +460,14 @@
             liveHR.textContent = child.val().hr;
             liveHRV.textContent = child.val().hrv;
             liveDataBox.style.display = "block";
+            document.getElementById("liveDataHeading").textContent = "Latest Measurement";
             getBaseline().then(baseline => {
               lastBaseline = baseline;
               showLiveAdvice(child.val().hr, child.val().hrv, baseline);
             });
           });
         }
-
+  
         const historySnap = await db.ref("measurements").limitToLast(5).get();
         historyListUl.innerHTML = "";
         if (historySnap.exists()) {
@@ -493,59 +492,43 @@
           }
         }
       }
-
-      function shouldPushToFirebase(currentHR, currentHRV) {
-        if (lastHR !== null && lastHRV !== null) {
-          const hrJump = Math.abs(currentHR - lastHR);
-          const hrvJump = Math.abs(currentHRV - lastHRV);
-          if (hrJump > MAX_HR_JUMP || hrvJump > MAX_HRV_JUMP) {
-            console.warn("Skipping noisy data", currentHR, currentHRV);
-            sameCount = 0;
-            pushedLast = false;
-            lastHR = currentHR;
-            lastHRV = currentHRV;
-            return false;
-          }
-
-          if (currentHR === lastHR && currentHRV === lastHRV) {
-            sameCount++;
-          } else {
-            sameCount = 0;
-            pushedLast = false;
-          }
-
-          if (sameCount >= SAME_THRESHOLD && !pushedLast) {
-            pushedLast = true;
-            return true;
-          }
-        }
-
-        lastHR = currentHR;
-        lastHRV = currentHRV;
-        return false;
-      }
-
-      async function saveMeasurement(hr, hrv) {
+  
+      // Save or update measurement depending on last timestamp
+      async function saveOrUpdateMeasurement(hr, hrv) {
         const newEntry = { hr, hrv, timestamp: Date.now() };
-        lastFive.push(newEntry);
-        if (lastFive.length > 5) lastFive.shift();
-
-        const last = lastFive.length > 1 ? lastFive[lastFive.length - 2] : null;
-
-        const isDuplicate = lastFive.every((v) => v.hr === hr && v.hrv === hrv);
-        const isDrastic = last && Math.abs(hr - last.hr) > 20;
-
-        if (!isDuplicate || isDrastic) {
+  
+        // Get last measurement snapshot and key
+        const lastSnap = await db.ref("measurements").limitToLast(1).get();
+        if (lastSnap.exists()) {
+          let lastKey = null;
+          let lastData = null;
+          lastSnap.forEach((child) => {
+            lastKey = child.key;
+            lastData = child.val();
+          });
+          const tenMinutes = 10 * 60 * 1000;
+          if (Date.now() - lastData.timestamp < tenMinutes) {
+            // Update existing record if within 10 minutes
+            await db.ref("measurements/" + lastKey).set(newEntry);
+            console.log(`[Firebase Update] Updated existing record at key: ${lastKey}`, newEntry);
+          } else {
+            // Otherwise push new record
+            await db.ref("measurements").push(newEntry);
+            console.log(`[Firebase Push] New record pushed at key: ${ref.key}`, newEntry);
+          }
+        } else {
+          // No previous data, push new
           await db.ref("measurements").push(newEntry);
-          console.log("Saved to DB:", newEntry);
-          updateHistoryList(newEntry);
+          console.log(`[Firebase Push] First record pushed at key: ${ref.key}`, newEntry);
         }
+  
+        updateHistoryList(newEntry);
       }
-
+  
       function updateHistoryList(newEntry) {
         lastFive.push(newEntry);
         if (lastFive.length > 5) lastFive.shift();
-
+  
         historyListUl.innerHTML = "";
         const sorted = [...lastFive].sort((a, b) => b.timestamp - a.timestamp);
         for (const item of sorted) {
@@ -563,10 +546,13 @@
           historyListUl.appendChild(li);
         }
       }
-
+  
       let latest = { hr: null, hrv: null };
       let valueCount = 0;
-
+  
+      // Debounce logic — store latest values and send every 30 seconds if stable
+      let sendInterval = null;
+  
       function handleNewMeasurement(type, value) {
         latest[type] = value;
         if (latest.hr !== null && latest.hrv !== null) {
@@ -578,14 +564,24 @@
               alertBox.style.display = "none";
             }, 5000);
           }
-          if (shouldPushToFirebase(latest.hr, latest.hrv)) {
-            saveMeasurement(latest.hr, latest.hrv);
+          // Show live advice with baseline
+          if (valueCount >= 10 && lastBaseline && !adviceShown) {
+            showLiveAdvice(latest.hr, latest.hrv, lastBaseline);
+            adviceShown = true;
           }
-          latest = { hr: null, hrv: null };
         }
       }
-
+  
+      function startSendingLoop() {
+        if (sendInterval) return;
+        sendInterval = setInterval(async () => {
+          if (latest.hr !== null && latest.hrv !== null) {
+            latest = { hr: null, hrv: null };
+          }
+        }, 20000); // every 20 seconds
+      }
       connectBtn.onclick = async () => {
+        adviceShown = false;
         try {
           const device = await navigator.bluetooth.requestDevice({
             acceptAllDevices: true,
@@ -604,25 +600,35 @@
           );
 
           hrChar.addEventListener("characteristicvaluechanged", (e) => {
-            const hr = e.target.value.getUint16(0, true) / 100;
+            const hr = e.target.value.getUint16(0, true);
             liveHR.textContent = hr;
             liveDataBox.style.display = "block";
-            if (lastBaseline) showLiveAdvice(hr, lastBaseline.hrv, lastBaseline);
+
+            if (lastBaseline && valueCount >= 5 && !adviceShown) {
+              showLiveAdvice(hr, lastBaseline.hrv, lastBaseline);
+            }
+
             handleNewMeasurement("hr", hr);
           });
-
           hrvChar.addEventListener("characteristicvaluechanged", (e) => {
-            const hrv = e.target.value.getUint16(0, true) / 100;
+            const hrv = e.target.value.getUint16(0, true);
             liveHRV.textContent = hrv;
-            if (lastBaseline) showLiveAdvice(lastBaseline.hr, hrv, lastBaseline);
+
+            if (lastBaseline && valueCount >= 5 && !adviceShown) {
+              showLiveAdvice(lastBaseline.hr, hrv, lastBaseline);
+            }
+
             handleNewMeasurement("hrv", hrv);
           });
 
           await hrChar.startNotifications();
           await hrvChar.startNotifications();
+          startSendingLoop();
+
           statusMsg.textContent = "Connected!";
           alertBox.style.display = "block";
           alertBox.textContent = "Device connected! Waiting for stable measurements...";
+          document.getElementById("liveDataHeading").textContent = "Live Measurement";
           setTimeout(() => {
             alertBox.style.display = "none";
           }, 5000);
@@ -636,4 +642,5 @@
     });
     </script>
   </body>
+  
 </html>
