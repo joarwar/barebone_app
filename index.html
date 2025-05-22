@@ -115,7 +115,6 @@
         user-select: none;
         animation: fadeInAlert 0.8s ease forwards;
       }
-
       #liveDataBox {
         background: rgba(214, 236, 210, 0.55);
         width: 100%;
@@ -299,9 +298,7 @@
     <p id="statusMsg"></p>
 
     <div id="liveDataBox" style="display: none">
-      <h3>Live Measurement</h3>
-      <p>HR: <span id="liveHR">--</span></p>
-      <p>HRV: <span id="liveHRV">--</span></p>
+      <div id="livePrompts"></div>
     </div>
     <div id="liveAdvice" style="display:none;margin-top:8px;font-size:1.04rem;color:#2b4141;background:#f8fafb;border-radius:10px;padding:10px 18px;max-width:340px;"></div>
 
@@ -331,10 +328,9 @@
       firebase.initializeApp(firebaseConfig);
       const db = firebase.database();
 
+
       const connectBtn = document.getElementById("connectBtn");
       const statusMsg = document.getElementById("statusMsg");
-      const liveHR = document.getElementById("liveHR");
-      const liveHRV = document.getElementById("liveHRV");
       const alertBox = document.getElementById("alertBox");
       const baselineSection = document.getElementById("baselineSection");
       const liveDataBox = document.getElementById("liveDataBox");
@@ -348,6 +344,7 @@
       const SAME_THRESHOLD = 4;
       const MAX_HR_JUMP = 30;
       const MAX_HRV_JUMP = 50;
+      
 
       async function renderBaselineUI() {
         console.log("renderBaselineUI called");
@@ -428,42 +425,42 @@
       }
 
       function showLiveAdvice(hr, hrv, baseline) {
-        const adviceBox = document.getElementById("liveAdvice");
-        if (!baseline || valueCount < 5) { 
-          adviceBox.style.display = "none"; 
-          return; 
-        }
-        let msg = "";
-        const hrDev = Math.abs(hr - baseline.hr);
-        const hrvDev = Math.abs(hrv - baseline.hrv);
-        if (hrDev > 10 && hr > baseline.hr) {
-          msg += `Your heart rate is a bit higher than usual. This might be due to things like less sleep, recent caffeine, alcohol, or nicotine, or even some physical activity. Nothing to worry about, just something to keep in mind!`;
-        } else if (hrDev > 10 && hr < baseline.hr) {
-          msg += `Your heart rate is a little lower than usual. This could be a sign of deep rest, relaxation, or recovery after some physical activity. Great job taking care of yourself!`;
-        }
-        if (hrvDev > 10 && hrv < baseline.hrv) {
-          if (msg) msg += '<br><br>';
-          msg += `Your HRV is a bit lower than usual. This can happen due to things like stress, less sleep, stimulants, or even feeling under the weather. It might be a good time to take it easy and prioritize rest.`;
-        } else if (hrvDev > 10 && hrv > baseline.hrv) {
-          if (msg) msg += '<br><br>';
-          msg += `Your HRV is higher than usual, nice! This could be a sign of good recovery, relaxation, or your body adapting well. Keep it up!"`;
-        }
-        if (msg) {
-          adviceBox.innerHTML = msg;
-          adviceBox.style.display = "block";
-        } else {
-          adviceBox.style.display = "none";
-        }
+      if (!baseline || valueCount < 5) {
+        liveDataBox.style.display = "none";
+        return;
       }
+
+      let msg = "";
+      const hrDev = hr - baseline.hr;
+      console.log("hr", hr);
+      console.log("baseline", baseline);
+      console.log("hrdev", hrDev);
+      if (hrDev > 20) {
+        msg = `OK, girl! Greta says turn it off and do something else. Don't let the phone rule your mood.`;
+      } else if (hrDev > 10) {
+        msg = `Hi, whatever you're watching, it seems to be having a negative influence on your stress levels. I just wanted to let you know so you can make a conscious decision about whether to keep watching or do something else.`;
+      } else if (hrDev < -10) {
+        msg = `Hi, just so you know, your heart rate is lower than usual, which is often a great sign of deep rest or recovery. Whatever you're doing right now seems to be supporting your wellbeing.`;
+      } else {
+        msg = `Your heart rate looks steady and within your normal range, that’s a good sign. Just keep tuning in and taking care of yourself.`;
+      }
+
+      if (liveDataBox.innerHTML !== msg) {
+      liveDataBox.innerHTML = msg;
+      liveDataBox.style.display = "block";
+  }
+}
+
       async function loadInitialData() {
         const lastSnap = await db.ref("measurements").limitToLast(1).get();
         if (lastSnap.exists()) {
           lastSnap.forEach((child) => {
-            liveHR.textContent = child.val().hr;
-            liveHRV.textContent = child.val().hrv;
+            //liveHR.textContent = child.val().hr;
+            //liveHRV.textContent = child.val().hrv;
             liveDataBox.style.display = "block";
             getBaseline().then(baseline => {
               lastBaseline = baseline;
+              console.log(baseline.hr);
               showLiveAdvice(child.val().hr, child.val().hrv, baseline);
             });
           });
@@ -493,53 +490,34 @@
           }
         }
       }
-
-      function shouldPushToFirebase(currentHR, currentHRV) {
-        if (lastHR !== null && lastHRV !== null) {
-          const hrJump = Math.abs(currentHR - lastHR);
-          const hrvJump = Math.abs(currentHRV - lastHRV);
-          if (hrJump > MAX_HR_JUMP || hrvJump > MAX_HRV_JUMP) {
-            console.warn("Skipping noisy data", currentHR, currentHRV);
-            sameCount = 0;
-            pushedLast = false;
-            lastHR = currentHR;
-            lastHRV = currentHRV;
-            return false;
-          }
-
-          if (currentHR === lastHR && currentHRV === lastHRV) {
-            sameCount++;
-          } else {
-            sameCount = 0;
-            pushedLast = false;
-          }
-
-          if (sameCount >= SAME_THRESHOLD && !pushedLast) {
-            pushedLast = true;
-            return true;
-          }
-        }
-
-        lastHR = currentHR;
-        lastHRV = currentHRV;
-        return false;
-      }
-
       async function saveMeasurement(hr, hrv) {
-        const newEntry = { hr, hrv, timestamp: Date.now() };
-        lastFive.push(newEntry);
-        if (lastFive.length > 5) lastFive.shift();
-
-        const last = lastFive.length > 1 ? lastFive[lastFive.length - 2] : null;
-
-        const isDuplicate = lastFive.every((v) => v.hr === hr && v.hrv === hrv);
-        const isDrastic = last && Math.abs(hr - last.hr) > 20;
-
-        if (!isDuplicate || isDrastic) {
-          await db.ref("measurements").push(newEntry);
-          console.log("Saved to DB:", newEntry);
-          updateHistoryList(newEntry);
+        // Skip if HR and HRV exactly the same as last saved (simulate no change)
+        if (hr === lastSavedHR && hrv === lastSavedHRV) {
+          console.log("Measurement unchanged, skipping save.");
+          return;
         }
+
+        const now = Date.now();
+        const FIVE_MINUTES = 5 * 60 * 1000;
+
+        if (lastSavedKey && (now - lastSavedTimestamp < FIVE_MINUTES)) {
+          // Update the existing record
+          await db.ref(`measurements/${lastSavedKey}`).set({ hr, hrv, timestamp: now });
+          console.log("Updated existing measurement:", { hr, hrv, timestamp: now });
+        } else {
+          // Push new record
+          const newEntry = { hr, hrv, timestamp: now };
+          const newRef = await db.ref("measurements").push(newEntry);
+          lastSavedKey = newRef.key;
+          console.log("Saved new measurement:", newEntry);
+        }
+
+        // Update tracking variables
+        lastSavedTimestamp = now;
+        lastSavedHR = hr;
+        lastSavedHRV = hrv;
+
+        updateHistoryList({ hr, hrv, timestamp: now });
       }
 
       function updateHistoryList(newEntry) {
@@ -566,6 +544,10 @@
 
       let latest = { hr: null, hrv: null };
       let valueCount = 0;
+      let lastSavedKey = null; // To hold the Firebase key of the last saved record
+      let lastSavedTimestamp = 0; // Timestamp of last saved measurement
+      let lastSavedHR = null;
+      let lastSavedHRV = null;
 
       function handleNewMeasurement(type, value) {
         latest[type] = value;
@@ -573,17 +555,20 @@
           valueCount++;
           if (valueCount === 5) {
             alertBox.style.display = "block";
-            alertBox.textContent = "Great! We've received 5 stable measurements. Your data is now being tracked.";
+            alertBox.textContent = "Data being tracked";
             setTimeout(() => {
               alertBox.style.display = "none";
             }, 5000);
           }
-          if (shouldPushToFirebase(latest.hr, latest.hrv)) {
-            saveMeasurement(latest.hr, latest.hrv);
-          }
-          latest = { hr: null, hrv: null };
         }
       }
+      setInterval(() => {
+        if (valueCount >= 5 && latest.hr !== null && latest.hrv !== null) {
+          saveMeasurement(latest.hr, latest.hrv);
+          console.log("pushed to database");
+        }
+      }, 20000);
+
 
       connectBtn.onclick = async () => {
         try {
@@ -591,7 +576,7 @@
             acceptAllDevices: true,
             optionalServices: ["0000fe40-cc7a-482a-984a-7f2ed5b3e58f"],
           });
-          const server = await device.gatt.connect();
+          const server = device.gatt.connected ? device.gatt : await device.gatt.connect();
           const service = await server.getPrimaryService(
             "0000fe40-cc7a-482a-984a-7f2ed5b3e58f"
           );
@@ -604,19 +589,29 @@
           );
 
           hrChar.addEventListener("characteristicvaluechanged", (e) => {
-            const hr = e.target.value.getUint16(0, true) / 100;
-            liveHR.textContent = hr;
-            liveDataBox.style.display = "block";
-            if (lastBaseline) showLiveAdvice(hr, lastBaseline.hrv, lastBaseline);
+            const hr = e.target.value.getUint16(0, true);
+            console.log("HR:", hr);
+
             handleNewMeasurement("hr", hr);
+
+            if (lastBaseline && valueCount >= 5 && latest.hrv !== null) {
+              showLiveAdvice(hr, latest.hrv, lastBaseline); // ✅ live HR + HRV
+            }
           });
 
+
           hrvChar.addEventListener("characteristicvaluechanged", (e) => {
-            const hrv = e.target.value.getUint16(0, true) / 100;
-            liveHRV.textContent = hrv;
-            if (lastBaseline) showLiveAdvice(lastBaseline.hr, hrv, lastBaseline);
+            const hrv = e.target.value.getUint16(0, true);
+            console.log("HRV:", hrv);
+
             handleNewMeasurement("hrv", hrv);
+
+            if (lastBaseline && valueCount >= 5 && latest.hr !== null) {
+              showLiveAdvice(latest.hr, hrv, lastBaseline); // ✅ live HR + HRV
+            }
           });
+
+
 
           await hrChar.startNotifications();
           await hrvChar.startNotifications();
